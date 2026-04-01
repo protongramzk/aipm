@@ -11,7 +11,7 @@ const start = async () => {
 
     console.log('🚀 DEV server jalan di http://localhost:3000')
   } catch (err) {
-    app.log.error(err)
+    console.error(err)
     process.exit(1)
   }
 }
