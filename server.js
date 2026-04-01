@@ -40,22 +40,30 @@ await app.register(multipart)
 // ==============================
 // 🔐 MIDDLEWARE AUTH (JWT)
 // ==============================
-async function authMiddleware(req, reply) {
-  const token = req.headers.authorization?.replace('Bearer ', '')
+export async function authMiddleware(req, reply) {
+  try {
+    const authHeader = req.headers.authorization
 
-  if (!token) {
+    if (!authHeader) {
+      return reply.code(401).send({ error: 'No token' })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+
+    // 🔥 VALIDASI KE SUPABASE
+    const { data, error } = await supabase.auth.getUser(token)
+
+    if (error || !data.user) {
+      return reply.code(401).send({ error: 'Invalid JWT' })
+    }
+
+    // inject user ke request
+    req.user = data.user
+
+  } catch (err) {
     return reply.code(401).send({ error: 'Unauthorized' })
   }
-
-  const { data, error } = await supabase.auth.getUser(token)
-
-  if (error || !data.user) {
-    return reply.code(401).send({ error: 'Invalid token' })
-  }
-
-  req.user = data.user
 }
-
 // ==============================
 // 🔑 AUTH ROUTES
 // ==============================
@@ -147,7 +155,7 @@ app.post('/create', {
 }, async (req, reply) => {
   // Ambil nama file dari header yang kita set di CLI tadi
   const fileName = req.headers['x-file-name'] || `upload_${Date.now()}.tgz`
-  const filepath = `./tmp_${Date.now()}_${fileName}`
+  const filepath = `.tmp//tmp_${Date.now()}_${fileName}`
 
   try {
     // req.raw adalah stream mentah dari Node.js (IncomingMessage)

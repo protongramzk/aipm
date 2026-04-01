@@ -125,30 +125,54 @@ export async function buildApp() {
     return { tree: data.tree }
   })
 
-  // ⚠️ upload (note: jangan pakai fs di vercel)
-  app.post('/create', {
-    preHandler: authMiddleware
-  }, async (req, reply) => {
-    try {
-      const chunks = []
-      for await (const chunk of req.raw) {
-        chunks.push(chunk)
-      }
+app.post('/create', {
+  preHandler: authMiddleware
+}, async (req, reply) => {
+  try {
+    const contentType = req.headers['content-type'] || ''
 
-      const buffer = Buffer.concat(chunks)
-
-      const result = await uploadPackage({
-        buffer,
-        userId: req.user.id
+    if (!contentType.includes('application/octet-stream')) {
+      return reply.code(400).send({
+        error: 'Content-Type harus application/octet-stream'
       })
-
-      return result
-    } catch (err) {
-      req.log.error(err)
-      return reply.code(500).send({ error: 'Upload gagal' })
     }
-  })
 
+    // ambil raw stream
+    const chunks = []
+    for await (const chunk of req.raw) {
+      chunks.push(chunk)
+    }
+
+    const buffer = Buffer.concat(chunks)
+
+    // =============================
+    // 🚀 CALL EDGE FUNCTION
+    // =============================
+    const res = await fetch(
+      `${process.env.SUPABASE_URL}/functions/v1/create-package`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Authorization': `Bearer ${req.headers.authorization?.replace('Bearer ', '')}`
+        },
+        body: buffer
+      }
+    )
+
+    const json = await res.json()
+
+    return reply.code(res.status).send(json)
+
+  } catch (err) {
+    req.log.error(err)
+
+    return reply.code(500).send({
+      error: 'Upload gagal',
+      detail: err.message
+    })
+  }
+})
   return app
 }
 
