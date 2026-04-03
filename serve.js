@@ -13,10 +13,13 @@ import {
 } from './lib/api-keys.js'
 import {
   getPackages,
-  uploadPackage,
   getPackageDetail
 } from './lib/packages.js'
 
+import {
+  toggleStar,
+  getStarStatus
+} from './lib/interaction.js'
 export async function buildApp() {
   const app = Fastify({ logger: true })
 
@@ -70,8 +73,9 @@ export async function buildApp() {
     }
   })
 
-  app.get('/auth/me', { preHandler: authMiddleware }, async () => {
-    const me = await getMe()
+  app.get('/u/:id', async (req,reply) => {
+  
+    const me = await getMe(req.params.id)
     return { user: me }
   })
 
@@ -83,26 +87,26 @@ export async function buildApp() {
   // ==============================
   // 🔑 API KEYS
   // ==============================
-  app.get('/api-keys', { preHandler: authMiddleware }, async () => {
-    const keys = await getMyApiKeys()
+  app.get('/api-keys', { preHandler: authMiddleware }, async (req) => {
+    const keys = await getMyApiKeys(req.user)
     return { keys }
   })
 
   app.post('/api-keys', { preHandler: authMiddleware }, async (req) => {
     const { name } = req.body
-    const key = await createApiKey(name)
+    const key = await createApiKey(req.user, name)
     return { key }
   })
 
   app.delete('/api-keys/:id', { preHandler: authMiddleware }, async (req) => {
     const { id } = req.params
-    return await deleteApiKey(id)
+    return await deleteApiKey(req.user, id)
   })
 
   app.put('/api-keys/:id', { preHandler: authMiddleware }, async (req) => {
     const { id } = req.params
     const { name } = req.body
-    return await renameApiKey(id, name)
+    return await renameApiKey(req.user, id, name)
   })
 
   // ==============================
@@ -125,56 +129,43 @@ export async function buildApp() {
     return { tree: data.tree }
   })
 
-app.post('/create', {
-  preHandler: authMiddleware
-}, async (req, reply) => {
+
+// ==============================
+// ⭐ STAR / INTERACTION
+// ==============================
+
+// TOGGLE STAR
+app.post('/star/:pkgname', { preHandler: authMiddleware }, async (req, reply) => {
   try {
-    const contentType = req.headers['content-type'] || ''
-
-    if (!contentType.includes('application/octet-stream')) {
-      return reply.code(400).send({
-        error: 'Content-Type harus application/octet-stream'
-      })
-    }
-
-    // ambil raw stream
-    const chunks = []
-    for await (const chunk of req.raw) {
-      chunks.push(chunk)
-    }
-
-    const buffer = Buffer.concat(chunks)
-
-    // =============================
-    // 🚀 CALL EDGE FUNCTION
-    // =============================
-    const res = await fetch(
-      `${process.env.SUPABASE_URL}/functions/v1/create-package`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Authorization': `Bearer ${req.headers.authorization?.replace('Bearer ', '')}`
-        },
-        body: buffer
-      }
-    )
-
-    const json = await res.json()
-
-    return reply.code(res.status).send(json)
-
+    const { pkgname } = req.params
+    const result = await toggleStar(req.user.id, pkgname)
+    return result
   } catch (err) {
-    req.log.error(err)
-
-    return reply.code(500).send({
-      error: 'Upload gagal',
-      detail: err.message
-    })
+    // Debounce error → 429
+    if (err.message.startsWith('Terlalu cepat')) {
+      return reply.code(429).send({ error: err.message })
+    }
+    // Package not found → 404
+    if (err.message.includes('tidak ditemukan')) {
+      return reply.code(404).send({ error: err.message })
+    }
+    return reply.code(500).send({ error: err.message })
   }
 })
+
+// GET STAR STATUS
+app.get('/star/:pkgname', { preHandler: authMiddleware }, async (req, reply) => {
+  try {
+    const { pkgname } = req.params
+    const result = await getStarStatus(req.user.id, pkgname)
+    return result
+  } catch (err) {
+    if (err.message.includes('tidak ditemukan')) {
+      return reply.code(404).send({ error: err.message })
+    }
+    return reply.code(500).send({ error: err.message })
+  }
+})
+
   return app
 }
-
-
-
