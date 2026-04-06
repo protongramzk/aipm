@@ -4,7 +4,7 @@ import multipart from '@fastify/multipart'
 import { supabase } from './lib/supabase.js'
 
 // import semua logic lu
-import { register, login, getMe, getSession } from './lib/auth.js'
+import { register, login,refreshSession, getMe, getSession } from './lib/auth.js'
 import {
   createApiKey,
   getMyApiKeys,
@@ -83,7 +83,14 @@ export async function buildApp() {
     const session = await getSession()
     return { session }
   })
-
+  app.post('/refresh-token', async (request, reply) => {
+  try {
+    const { access_token, refresh_token } = await refreshSession()
+    reply.send({ access_token, refresh_token })
+  } catch (err) {
+    reply.status(401).send({ error: 'cannot refresh token' })
+  }
+})
   // ==============================
   // 🔑 API KEYS
   // ==============================
