@@ -112,12 +112,24 @@ export async function buildApp() {
   // ==============================
   // 📦 PACKAGES
   // ==============================
-  app.get('/packages', async (req) => {
-    const { type, username } = req.query
-    const data = await getPackages({ type, username })
-    return { packages: data }
-  })
+// ==============================
+// 📦 PACKAGES
+// ==============================
+app.get('/packages', async (req) => {
+  const { type, username } = req.query;
 
+  let queryType = type;
+  let userFilter = username;
+
+  // 🔹 kalau tab 'you', override type + set username
+  if (type === 'you' && req.user) { // misal req.user ada dari session
+    queryType = 'user';
+    userFilter = req.user.username;
+  }
+
+  const data = await getPackages({ type: queryType, username: userFilter });
+  return { packages: data };
+});
   app.get('/mol/:pkgname', async (req) => {
     const { pkgname } = req.params
     return await getPackageDetail(pkgname)
