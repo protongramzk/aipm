@@ -1,0 +1,7 @@
+{"level":30,"time":1775635139138,"pid":64452,"hostname":"devbox","msg":"Server listening at http://127.0.0.1:3000"}
+🚀 DEV server jalan di http://localhost:3000
+{"level":30,"time":1775635139139,"pid":64452,"hostname":"devbox","msg":"Server listening at http://192.168.0.2:3000"}
+{"level":30,"time":1775635143814,"pid":64452,"hostname":"devbox","reqId":"req-1","req":{"method":"POST","url":"/refresh-token","host":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":59454},"msg":"incoming request"}
+{"level":30,"time":1775635143823,"pid":64452,"hostname":"devbox","reqId":"req-1","res":{"statusCode":400},"responseTime":7.719417000073008,"msg":"request completed"}
+{"level":30,"time":1775635143835,"pid":64452,"hostname":"devbox","reqId":"req-2","req":{"method":"POST","url":"/refresh-token","host":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":59458},"msg":"incoming request"}
+{"level":30,"time":1775635143836,"pid":64452,"hostname":"devbox","reqId":"req-2","res":{"statusCode":400},"responseTime":1.017935000010766,"msg":"request completed"}

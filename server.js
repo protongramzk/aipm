@@ -8,7 +8,8 @@ import {
   register,
   login,
   getMe,
-  getSession
+  getSession,
+  refreshSession
 } from './lib/auth.js'
 
 import {
@@ -96,6 +97,19 @@ app.get('/auth/me', { preHandler: authMiddleware }, async () => {
 app.get('/auth/session', async () => {
   const session = await getSession()
   return { session }
+})
+
+app.post('/refresh-token', async (request, reply) => {
+  try {
+    const { refresh_token: bodyRefreshToken } = request.body || {}
+    if (!bodyRefreshToken) {
+      return reply.status(400).send({ error: 'refresh_token is required' })
+    }
+    const { access_token, refresh_token } = await refreshSession(bodyRefreshToken)
+    reply.send({ access_token, refresh_token })
+  } catch (err) {
+    reply.status(401).send({ error: 'cannot refresh token' })
+  }
 })
 
 // ==============================
