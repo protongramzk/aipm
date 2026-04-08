@@ -74,9 +74,14 @@ Exchange a refresh token for a new access token and refresh token.
 }
 ```
 
-#### Get User Profile
+#### Get Current User Profile
+`GET /auth/me`
+**Header:** `Authorization: Bearer <JWT>`
+Retrieve the current authenticated user's profile information.
+
+#### Get User Profile by ID
 `GET /u/:id`
-Retrieve a user's profile information.
+Retrieve a user's profile information by their ID.
 
 **Response:**
 ```json
@@ -135,8 +140,10 @@ Manage API keys for programmatic access. All endpoints require a valid JWT in th
 List packages with optional filtering and sorting.
 
 **Query Parameters:**
-- `type`: One of `feed` (default, newest), `rank` (most stars/downloads), `trending` (hotness), `user` (filter by username).
+- `type`: One of `feed` (default, newest), `rank` (most stars/downloads), `trending` (hotness), `user` (filter by username), `you` (current user's packages).
 - `username`: Username to filter by (required if `type=user`).
+
+**Note:** For `type=you`, you must provide a valid JWT in the `Authorization` header.
 
 #### Get Package Detail
 `GET /mol/:pkgname`
@@ -145,6 +152,11 @@ Get detailed information about a package, including its file tree.
 #### Get Package Tree
 `GET /tree/:pkgname`
 Get only the file tree of a package.
+
+#### Create/Upload Package
+`POST /create`
+**Header:** `Authorization: Bearer <JWT>`, `x-file-name: <filename>`
+Upload a package (`.tgz` file) directly as binary data.
 
 ---
 

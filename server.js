@@ -89,8 +89,13 @@ app.post('/auth/login', async (req, reply) => {
   }
 })
 
+
+app.get('/u/:id', async (req, reply) => {
+  const me = await getMe(req.params.id)
+  return { user: me }
+})
 app.get('/auth/me', { preHandler: authMiddleware }, async () => {
-  const me = await getMe()
+  const me = await getMe(req.user.id)
   return { user: me }
 })
 
@@ -117,25 +122,25 @@ app.post('/refresh-token', async (request, reply) => {
 // ==============================
 
 app.get('/api-keys', { preHandler: authMiddleware }, async () => {
-  const keys = await getMyApiKeys()
+  const keys = await getMyApiKeys(req.user)
   return { keys }
 })
 
 app.post('/api-keys', { preHandler: authMiddleware }, async (req) => {
   const { name } = req.body
-  const key = await createApiKey(name)
+  const key = await createApiKey(req.user, name)
   return { key }
 })
 
 app.delete('/api-keys/:id', { preHandler: authMiddleware }, async (req) => {
   const { id } = req.params
-  return await deleteApiKey(id)
+  return await deleteApiKey(req.user, id)
 })
 
 app.put('/api-keys/:id', { preHandler: authMiddleware }, async (req) => {
   const { id } = req.params
   const { name } = req.body
-  return await renameApiKey(id, name)
+  return await renameApiKey(req.user, id, name)
 })
 
 // ==============================
@@ -143,10 +148,20 @@ app.put('/api-keys/:id', { preHandler: authMiddleware }, async (req) => {
 // ==============================
 
 // GET ALL (feed / rank / user)
-app.get('/packages', async (req) => {
-  const { type, username } = req.query
-  const data = await getPackages({ type, username })
-  return { packages: data }
+app.get('/packages', { preHandler: async (req, reply) => { try { await authMiddleware(req, reply) } catch (e) {} } }, async (req) => {
+  const { type, username } = req.query;
+
+  let queryType = type;
+  let userFilter = username;
+
+  // if tab 'you', override type + set username
+  if (type === 'you' && req.user) {
+    queryType = 'user';
+    userFilter = req.user.username;
+  }
+
+  const data = await getPackages({ type: queryType, username: userFilter });
+  return { packages: data };
 })
 
 // DETAIL PACKAGE

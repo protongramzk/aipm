@@ -83,6 +83,11 @@ export async function buildApp() {
     const session = await getSession()
     return { session }
   })
+
+  app.get('/auth/me', { preHandler: authMiddleware }, async (req) => {
+    const me = await getMe(req.user.id)
+    return { user: me }
+  })
   app.post('/refresh-token', async (request, reply) => {
     try {
       const { refresh_token: bodyRefreshToken } = request.body || {}
@@ -126,7 +131,7 @@ export async function buildApp() {
 // ==============================
 // 📦 PACKAGES
 // ==============================
-app.get('/packages', async (req) => {
+app.get('/packages', { preHandler: async (req, reply) => { try { await authMiddleware(req, reply) } catch (e) {} } }, async (req) => {
   const { type, username } = req.query;
 
   let queryType = type;
